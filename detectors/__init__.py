@@ -1,0 +1,1 @@
+from .yolov_detector import run_yolov_detector
