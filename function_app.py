@@ -1,3 +1,6 @@
+## conda activate torch-conda
+#  func start --port 7071
+
 import json
 import logging
 import os
@@ -6,9 +9,11 @@ import azure.durable_functions as df
 import azure.functions as func
 
 from managers import AzureBlobManager, AzureTableStorageManager
-from models import BlobToProcessQueueMessage, BlobProcessStatus, VisioDetectorHttpRequest, DetectorType, ImagePredictionResult
+from models import BlobToProcessQueueMessage, VisioDetectorHttpRequest, ImagePredictionResult
+from models.enums import BlobProcessStatus, DetectorType
 from detectors import run_yolov_detector
 from visio_detector import VisioDetector
+from utils import get_child_directory_path
 
 blob_container_name = os.environ.get("BlobContainerName")
 blob_connection_string = os.environ.get("BlobConnectionString")
@@ -99,7 +104,7 @@ def run_yolov_detection_activity(visioDetectorReqStr: str) -> str:
     try:
         logging.info(f"Detector Type: {visioDetectorModel.detector_type}")
 
-        file_download_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'image_set/yolov5')
+        file_download_dir = get_child_directory_path('image_set/yolov5')
         downloaded_file_path = azure_blob_manager.download_and_upload_file(visioDetectorModel.file_name, file_download_dir)
 
         yolov5_precition_result = VisioDetector.run_yolov_detector_wrapper(visioDetectorModel.file_name, downloaded_file_path)
@@ -119,38 +124,3 @@ def run_yolov_detection_activity(visioDetectorReqStr: str) -> str:
             errors= str(e),
             has_errors=True
             ).to_json()
-
-# @app.activity_trigger(input_name="visioDetectorReqStr")
-# def run_ssd_detection_activity(visioDetectorReqStr: str) -> str:
-#     logging.info(f"run_ssd_detection_activity: {type(visioDetectorReqStr)}")
-
-#     visioDetectorModel = VisioDetectorHttpRequest.from_json(json.loads(visioDetectorReqStr))
-
-#     logging.info(f"Running SSD detection for: {visioDetectorModel.file_name}")
-    
-#     try:
-#         logging.info(f"Detector Type: {visioDetectorModel.detector_type}")
-#         return ImagePredictionResult(
-#             image_name=visioDetectorModel.file_name,
-#             detector_type=visioDetectorModel.detector_type,
-#             prediction= 0.90
-#             ).to_json()
-    
-#         # azure_blob_manager.download_and_upload_file(blob_process_queue_message.file_name, source_img_dir)
-
-#     except Exception as e:
-#         logging.error(f"An unexpected error occurred: {e}")
-#         return ImagePredictionResult(
-#             image_name=visioDetectorModel.file_name,
-#             detector_type=visioDetectorModel.detector_type,
-#             errors= str(e),
-#             has_errors=True
-#             ).to_json()
-
-# @app.queue_trigger(arg_name="azqueue", queue_name="blob-py-test-queue", connection="AzureWebJobsStorage")
-# def queue_trigger(azqueue: func.QueueMessage):
-#     queue_message = azqueue.get_body().decode('utf-8')
-
-#     client = df.DurableOrchestrationClient(starter)
-#     instance_id = yield client.start_new(orchestrator_function, None, azqueue)
-#     return instance_id

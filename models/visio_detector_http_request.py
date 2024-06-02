@@ -1,14 +1,7 @@
-from enum import Enum
 import json
 from utils import from_json_with_enum
 from dataclasses import dataclass
-
-
-class DetectorType(Enum):
-    YoloV5 = 0
-    SSD = 1
-    Mask_R_CNN = 2
-    UNKNOWN = 3
+from .enums import DetectorType
 
 @dataclass
 class VisioDetectorHttpRequest:

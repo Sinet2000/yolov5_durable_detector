@@ -1,14 +1,9 @@
 import json
-from enum import Enum
 from dataclasses import dataclass
 from typing import Optional
 from .visio_detector_http_request import DetectorType
 from utils import string_to_enum
-
-class PredictionClass(Enum):
-    basketball = 0
-    redball = 1
-    UNKNOWN = 99
+from .enums import PredictionClass
 
 @dataclass
 class ImagePredictionResult:

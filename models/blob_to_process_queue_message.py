@@ -1,11 +1,4 @@
-from enum import Enum
-from typing import Optional
-
-class BlobProcessStatus(Enum):
-    ReadyToProcess = 0
-    InProgress = 1
-    Processed = 2
-    ErrorOccurred = 3
+from .enums import BlobProcessStatus
 
 class BlobToProcessQueueMessage:
     def __init__(self,

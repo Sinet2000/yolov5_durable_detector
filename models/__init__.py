@@ -1,3 +1,3 @@
 from .blob_to_process_queue_message import BlobProcessStatus, BlobToProcessQueueMessage
 from .image_prediction_result import ImagePredictionResult
-from .visio_detector_http_request import DetectorType, VisioDetectorHttpRequest
+from .visio_detector_http_request import VisioDetectorHttpRequest

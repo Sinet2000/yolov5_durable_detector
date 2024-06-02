@@ -3,28 +3,9 @@ import os
 import shutil
 import time
 
-from models.image_prediction_result import ImagePredictionResult, DetectorType
-
-def rename_file_with_prefix(file_path, prefix) -> tuple:
-    try:
-        if os.path.exists(file_path):
-            # Split the file path into directory and filename
-            directory, filename = os.path.split(file_path)
-            # Append the prefix to the filename
-            new_filename = f"{prefix}{filename}"
-            # Construct the new file path
-            new_file_path = os.path.join(directory, new_filename)
-            # Rename the file
-            os.rename(file_path, new_file_path)
-            print(f"File '{file_path}' renamed to '{new_file_path}'.")
-
-            return new_filename, new_file_path
-        else:
-            print(f"File '{file_path}' does not exist.")
-            return None
-    except OSError as e:
-        print(f"Error renaming file: {e}")
-        return None
+from models import ImagePredictionResult
+from models.enums import DetectorType
+from utils.storage_helpers import img_rename_to_detection_result
 
 def run_yolov_detector(
         file_name,
@@ -88,7 +69,7 @@ def run_yolov_detector(
             print("Errors:", errors)
 
         # Serialize the output to JSON
-        result_img_name, result_img_path = rename_file_with_prefix(os.path.join(prediction_result_dir, file_name), 'yolov5_')
+        result_img_name, result_img_path = img_rename_to_detection_result(os.path.join(prediction_result_dir, file_name), detector_type)
         first_row = predictions_csv_content.split('\n')[0]
         # Splitting the first row into components 
         image_name, classification, prediction = first_row.split(',')
