@@ -4,4 +4,4 @@
 conda activate torch-conda
 
 # Run the 'func' command with the specified port
-func start --port 7071
+func start --port 7074

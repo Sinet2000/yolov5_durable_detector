@@ -13,7 +13,9 @@ from models import BlobToProcessQueueMessage, VisioDetectorHttpRequest, ImagePre
 from models.enums import BlobProcessStatus, DetectorType
 from detectors import run_yolov_detector
 from visio_detector import VisioDetector
-from utils import get_child_directory_path
+from utils import get_child_directory_path, configure_logging
+
+configure_logging('sys-logs')
 
 blob_container_name = os.environ.get("BlobContainerName")
 blob_connection_string = os.environ.get("BlobConnectionString")
@@ -40,28 +42,46 @@ app = df.DFApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 @app.route(route="yolov/detect", methods=("POST",))
 @app.durable_client_input(client_name="client")
 async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClient):
-    req_body = req.get_body().decode('utf-8')
-    logging.info(f"Started ObjectDetectionHttpTrigger, received: {req_body}")
+    try:
+        # Get the request body
+        req_body = req.get_body().decode('utf-8')
+        logging.info(f"Started ObjectDetectionHttpTrigger, received: {req_body}")
 
-    instance_id = await client.start_new("image_detection_orchestrator", client_input=req_body)
-    
-    await client.wait_for_completion_or_create_check_status_response(req, instance_id)     
+        # Start a new orchestration instance
+        instance_id = await client.start_new("image_detection_orchestrator", client_input=req_body)
+        logging.info(f"Started orchestration with ID = '{instance_id}'.")
 
-    # Get orchestration execution status
-    status = await client.get_status(instance_id)     
+        # Wait for the orchestration to complete or create a status check response
+        response = await client.wait_for_completion_or_create_check_status_response(req, instance_id)
+        logging.info(f"Orchestration instance {instance_id} status checked or completion awaited.")
 
-    # Retrieves orchestration execution results and displays them on the screen
-    runtime = status.runtime_status
-    output = status.output
-    logging.info(f"runtime: {runtime}\n\n output:{output}")
+        # Get the orchestration status
+        status = await client.get_status(instance_id)
+        
+        if status is None:
+            logging.error(f"Orchestration with ID = '{instance_id}' not found.")
+            return func.HttpResponse(
+                "Orchestration not found.",
+                status_code=404
+            )
 
-    # response = client.create_check_status_response(req, instance_id)
-    # body_bytes = response.get_body()
-    # body_str = body_bytes.decode('utf-8')  # Assuming UTF-8 encoding, adjust if necessary
-    # logging.info(f"ObjectDetectionHttpTrigger.response body: {body_str}")
-    # return response
+        # Retrieve orchestration execution results and display them on the screen
+        runtime = status.runtime_status
+        output = status.output
+        logging.info(f"Orchestration ID: {instance_id} runtime: {runtime} output: {output}")
 
-    return output
+        # Return the orchestration output as the HTTP response
+        return func.HttpResponse(
+            body=output,
+            status_code=200,
+            mimetype="application/json"
+        )
+    except Exception as e:
+        logging.error(f"Error in http_start: {str(e)}")
+        return func.HttpResponse(
+            f"An error occurred: {str(e)}",
+            status_code=500
+        )
 
 @app.orchestration_trigger(context_name="context")
 def image_detection_orchestrator(context: df.DurableOrchestrationContext):
@@ -89,7 +109,7 @@ def image_detection_orchestrator(context: df.DurableOrchestrationContext):
         logging.error(f"An unexpected error occurred: {ex}")
         return ImagePredictionResult(
             image_name=visio_detector_json['fileName'],
-            detector_type=DetectorType.UNKNOWN,
+            detector_type=DetectorType.YoloV5,
             errors= str(ex),
             has_errors=True
             ).to_json()
